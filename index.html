@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<title>three.js webgl - geometry - terrain</title>
+		<title>maps</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 		<style>
@@ -54,6 +54,7 @@
 			var container, stats;
 			var camera, scene, renderer;
 			var sphere;
+			var worldWidth = 230, worldDepth = 230, worldSize = 75000;
 
 			var parameters = {
 				width: 2000,
@@ -82,7 +83,7 @@
 				scene = new THREE.Scene();
 
 				camera = new THREE.PerspectiveCamera( 55, window.innerWidth / window.innerHeight, 0.5, 3000000 );
-				camera.position.set( 2000, 750, 2000 );
+				camera.position.set( 2000, 2000, 2000 );
 
 				controls = new THREE.OrbitControls( camera, renderer.domElement );
 				controls.userPan = false;
@@ -192,8 +193,8 @@
 				scene.add( sphere );
 
 				//land 
-				var worldWidth = 30, worldDepth = 30;
-				var geometry = new THREE.PlaneBufferGeometry( 75000, 75000, worldWidth - 1, worldDepth - 1 );
+				
+				var geometry = new THREE.PlaneBufferGeometry( worldSize, worldSize, worldWidth - 1, worldDepth - 1 );
 				geometry.applyMatrix( new THREE.Matrix4().makeRotationX( - Math.PI / 2 ) );
 
 				data = generateHeight( worldWidth, worldDepth );
@@ -202,23 +203,34 @@
 
 				for ( var i = 0, j = 0, l = vertices.length; i < l; i ++, j += 3 ) {
 
-					vertices[ j + 1 ] = data[ i ] * 10;
+					vertices[ j + 1 ] = data[ i ] * 50;
 
 				}
 
 				geometry.computeFaceNormals();
 
+				var mate = new THREE.MeshLambertMaterial();
+
 				texture = new THREE.Texture( generateTexture( data, worldWidth, worldDepth ), new THREE.UVMapping(), THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping );
 				texture.needsUpdate = true;
 
-				mesh = new THREE.Mesh( geometry, new THREE.MeshBasicMaterial( { map: texture } ) );
+				mesh = new THREE.Mesh( geometry, mate);
 				scene.add( mesh );
 
-				var geometry = new THREE.CylinderGeometry( 0, 20, 100, 3 );
-				geometry.applyMatrix( new THREE.Matrix4().makeTranslation( 0, 50, 0 ) );
-				geometry.applyMatrix( new THREE.Matrix4().makeRotationX( Math.PI / 2 ) );
-				helper = new THREE.Mesh( geometry, new THREE.MeshNormalMaterial() );
-				scene.add( helper );
+				var helper = new THREE.WireframeHelper( mesh );
+					helper.material.depthTest = false;
+					helper.material.opacity = 0.25;
+					helper.material.transparent = true;
+					scene.add( helper );
+
+				// roll-over helpers
+				var sect = worldSize/worldWidth;
+				rollOverGeo = new THREE.BoxGeometry( sect, 50, sect );
+				rollOverMaterial = new THREE.MeshBasicMaterial( { color: 0xff0000, opacity: 0.5, transparent: true } );
+				rollOverMesh = new THREE.Mesh( rollOverGeo, rollOverMaterial );
+				scene.add( rollOverMesh );
+
+				container.addEventListener( 'mousemove', onMouseMove, false );
 
 			}
 
@@ -235,7 +247,7 @@
 
 				var time = performance.now() * 0.001;
 				var y = Math.sin( time ) * 500 + 250;
-				sphere.position.y = Math.sin( time ) * 500 + 250;
+				sphere.position.y = Math.sin( time ) * 500 + 450;
 				sphere.rotation.x = time * 0.5;
 				sphere.rotation.z = y * 0.005;
 
@@ -320,11 +332,13 @@
 
 				for ( var i = 0, l = imageData.length; i < l; i += 4 ) {
 
-					var v = ~~ ( Math.random() * 5 );
+					var v = ~~ ( Math.random() * 30 );
 
 					imageData[ i ] += v;
 					imageData[ i + 1 ] += v;
 					imageData[ i + 2 ] += v;
+
+				
 
 				}
 
@@ -333,6 +347,41 @@
 				return canvasScaled;
 
 			}
+
+			function onMouseMove( event ) {
+
+				var mouseX = ( event.clientX / window.innerWidth ) * 2 - 1;
+				var mouseY = -( event.clientY / window.innerHeight ) * 2 + 1;
+
+				var vector = new THREE.Vector3( mouseX, mouseY, camera.near );
+				// Convert the [-1, 1] screen coordinate into a world coordinate on the near plane
+				vector.unproject( camera );
+
+				var raycaster = new THREE.Raycaster( camera.position, vector.sub( camera.position ).normalize() );
+
+				// See if the ray from the camera into the world hits one of our meshes
+				var intersects = raycaster.intersectObject( mesh );
+				var step = worldSize/worldWidth;
+				// Toggle rotation bool for meshes that we clicked
+				if ( intersects.length > 0 ) {
+
+					// helper.position.set( 0, 0, 0 );
+					// helper.lookAt( intersects[ 0 ].face.normal );
+
+					// helper.position.copy( intersects[ 0 ].point );
+
+					var intersect = intersects[ 0 ];
+
+					rollOverMesh.position.copy( intersect.point ).add( intersect.face.normal  );
+					rollOverMesh.position.divideScalar( step ).floor().multiplyScalar( step ).addScalar( step/2 );
+
+					console.log(intersects[ 0 ].object);
+
+					//intersects[ 0 ].object.material.color.setHex( Math.random() * 0xffffff );
+				}
+
+			}
+
 
 		</script>
 	</body>
