@@ -261,7 +261,7 @@
 			function generateHeight( width, height ) {
 
 				var size = width * height, data = new Uint8Array( size ),
-				perlin = new ImprovedNoise(), quality = 1, z = Math.random() * 100;
+				perlin = new ImprovedNoise(), quality = 1, z = Math.random() * 10;
 
 				for ( var j = 0; j < 4; j ++ ) {
 
@@ -363,6 +363,7 @@
 				var intersects = raycaster.intersectObject( mesh );
 				var step = worldSize/worldWidth;
 				// Toggle rotation bool for meshes that we clicked
+
 				if ( intersects.length > 0 ) {
 
 					// helper.position.set( 0, 0, 0 );
@@ -372,10 +373,13 @@
 
 					var intersect = intersects[ 0 ];
 
-					rollOverMesh.position.copy( intersect.point ).add( intersect.face.normal  );
-					rollOverMesh.position.divideScalar( step ).floor().multiplyScalar( step ).addScalar( step/2 );
+					rollOverMesh.position.copy( intersect.point );
+					rollOverMesh.position.y += intersect.face.normal.y ;
+					rollOverMesh.position.x -= step/2;
+					rollOverMesh.position.z -= step/2;
+					rollOverMesh.position.divideScalar( step ).floor().multiplyScalar( step).addScalar( step );
 
-					console.log(intersects[ 0 ].object);
+					console.log( rollOverMesh.position);
 
 					//intersects[ 0 ].object.material.color.setHex( Math.random() * 0xffffff );
 				}
